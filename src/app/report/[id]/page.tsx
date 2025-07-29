@@ -9,6 +9,7 @@ import { SdcLogo } from '@/components/icons/SdcLogo';
 import { type Report } from '@/lib/types';
 import ReportPreview from '@/components/ReportPreview';
 import { calculateDecree } from '@/lib/calculator';
+import { Button } from '@/components/ui/button';
 
 export default function ReportPage() {
   const router = useRouter();
