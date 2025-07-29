@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { ur } from 'date-fns/locale/ur';
 
 import { reportSchema } from '@/lib/validators';
 import { type Report, type CalculatedReport } from '@/lib/types';
@@ -34,6 +33,14 @@ interface ReportFormProps {
   onSave: (data: Report) => void;
   onCancel: () => void;
 }
+
+const formatDateForInput = (date: Date) => {
+    return date.toLocaleDateString('ur-PK-u-nu-latn', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    });
+};
 
 export default function ReportForm({ initialData, onSave, onCancel }: ReportFormProps) {
   const [calculatedReport, setCalculatedReport] = useState<CalculatedReport | null>(null);
@@ -217,7 +224,7 @@ const CalculationPeriodForm = ({ form }: { form: any }) => (
             <FormControl>
               <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
                 <CalendarIcon className="ml-2 h-4 w-4" />
-                {field.value ? format(field.value, "PPP", { locale: ur }) : <span>تاریخ منتخب کریں</span>}
+                {field.value ? formatDateForInput(field.value) : <span>تاریخ منتخب کریں</span>}
               </Button>
             </FormControl>
           </PopoverTrigger>
@@ -236,7 +243,7 @@ const CalculationPeriodForm = ({ form }: { form: any }) => (
             <FormControl>
               <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
                 <CalendarIcon className="ml-2 h-4 w-4" />
-                {field.value ? format(field.value, "PPP", { locale: ur }) : <span>تاریخ منتخب کریں</span>}
+                {field.value ? formatDateForInput(field.value) : <span>تاریخ منتخب کریں</span>}
               </Button>
             </FormControl>
           </PopoverTrigger>
@@ -358,7 +365,7 @@ const PaymentsForm = ({ form, fields, append, remove, reportGenerator }: { form:
                             <FormControl>
                                 <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
                                     <CalendarIcon className="ml-2 h-4 w-4" />
-                                    {field.value ? format(field.value, "PPP", { locale: ur }) : <span>تاریخ منتخب کریں</span>}
+                                    {field.value ? formatDateForInput(field.value) : <span>تاریخ منتخب کریں</span>}
                                 </Button>
                             </FormControl>
                         </PopoverTrigger>
@@ -422,7 +429,7 @@ const PartialSatisfactionForm = ({ form, partiallySatisfied }: { form: any, part
                     <FormControl>
                         <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
                             <CalendarIcon className="ml-2 h-4 w-4"/>
-                            {field.value ? format(field.value, "PPP", { locale: ur }) : <span>تاریخ منتخب کریں</span>}
+                            {field.value ? formatDateForInput(field.value) : <span>تاریخ منتخب کریں</span>}
                         </Button>
                     </FormControl>
                 </PopoverTrigger>
