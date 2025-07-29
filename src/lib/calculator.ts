@@ -1,15 +1,34 @@
-import { differenceInDays, addDays, addYears, format } from 'date-fns';
+import { differenceInDays, addDays, addYears, format, differenceInMonths, getDaysInMonth, startOfMonth, endOfMonth } from 'date-fns';
 import { type Report, type CalculatedReport, type YearlyBreakdown, type RecipientCalculation, type OtherAmount, type Payment } from './types';
-
-const AVG_DAYS_IN_MONTH = 30.4375; // More precise average
 
 function getPeriodDisplay(startDate: Date, endDate: Date): string {
     if (endDate < startDate) return "0 مہینے, 0 دن";
-    const daysDiff = differenceInDays(endDate, startDate) + 1;
-    const totalMonths = Math.floor(daysDiff / AVG_DAYS_IN_MONTH);
-    const remainingDays = Math.round(daysDiff - (totalMonths * AVG_DAYS_IN_MONTH));
-    return `${totalMonths} مہینے, ${remainingDays} دن`;
+
+    let totalMonths = differenceInMonths(endDate, startDate);
+    let tempDate = new Date(startDate);
+    tempDate.setMonth(tempDate.getMonth() + totalMonths);
+    
+    let daysDiff = differenceInDays(endDate, tempDate);
+
+    // Adjust if we've overshot the month
+    if (daysDiff < 0) {
+        totalMonths--;
+        tempDate = new Date(startDate);
+        tempDate.setMonth(tempDate.getMonth() + totalMonths);
+        daysDiff = differenceInDays(endDate, tempDate);
+    }
+    
+    // Add 1 to days to make it inclusive
+    daysDiff += 1;
+
+    if (daysDiff >= getDaysInMonth(endDate)) {
+        totalMonths++;
+        daysDiff = 0;
+    }
+
+    return `${totalMonths} مہینے, ${daysDiff} دن`;
 }
+
 
 export function calculateDecree(reportData: Omit<Report, 'id' | 'createdAt'>): CalculatedReport {
   const {
@@ -32,50 +51,57 @@ export function calculateDecree(reportData: Omit<Report, 'id' | 'createdAt'>): C
   const recipientCalculations: RecipientCalculation[] = [];
 
   for (const recipient of recipients) {
-    const baseAmount = recipient.amount;
+    let baseAmount = recipient.amount;
     let totalRecipientAmount = 0;
     const yearlyBreakdown: YearlyBreakdown[] = [];
+    
     let currentRate = baseAmount;
     
-    // If partially satisfied, we need to calculate the rate at the partial satisfaction date
+    // If partially satisfied, calculate the rate at the partial satisfaction date
     if (partiallySatisfied && partialSatisfactionDate) {
         let rateCalcDate = new Date(startDate);
-        const fixedIncreaseAmount = increaseType === 'fixed' ? (baseAmount * yearlyIncrease / 100) : 0;
+        let rateAtSatisfaction = baseAmount;
         
-        while(rateCalcDate < partialSatisfactionDate) {
-            const nextAnniversary = addYears(rateCalcDate, 1);
-            if(nextAnniversary <= partialSatisfactionDate) {
-                if (increaseType === 'progressive') {
-                    currentRate *= (1 + yearlyIncrease / 100);
-                } else {
-                    currentRate += fixedIncreaseAmount;
-                }
-                rateCalcDate = nextAnniversary;
-            } else {
-                break;
+        while(addYears(rateCalcDate, 1) <= partialSatisfactionDate) {
+            if (increaseType === 'progressive') {
+                rateAtSatisfaction *= (1 + yearlyIncrease / 100);
+            } else { // fixed
+                rateAtSatisfaction += (baseAmount * yearlyIncrease / 100);
             }
+            rateCalcDate = addYears(rateCalcDate, 1);
         }
+        currentRate = rateAtSatisfaction;
     }
 
-
     let loopStartDate = new Date(effectiveStartDate);
+    let firstAnniversary = new Date(startDate);
+    // Find the first anniversary that is after or on the loopStartDate
+    while(firstAnniversary < loopStartDate) {
+        firstAnniversary = addYears(firstAnniversary, 1);
+    }
 
     while (loopStartDate <= endDate) {
       const anniversaryYear = loopStartDate.getFullYear();
       let periodEndDate: Date;
-
-      // Determine the end of the current calculation period (either next anniversary or report end date)
-      const nextAnniversary = addYears(loopStartDate, 1);
-      
+      let nextAnniversary = new Date(firstAnniversary);
+       // Ensure nextAnniversary is in the future relative to loopStartDate
+       while(nextAnniversary <= loopStartDate){
+          nextAnniversary = addYears(nextAnniversary, 1);
+       }
+       
       if (nextAnniversary <= endDate) {
           periodEndDate = addDays(nextAnniversary, -1);
       } else {
           periodEndDate = endDate;
       }
+      
+      const monthsInPeriod = differenceInMonths(periodEndDate, loopStartDate);
+      const daysInLastMonth = differenceInDays(periodEndDate, addDays(startOfMonth(periodEndDate), -1));
+      const partialMonthFraction = daysInLastMonth / getDaysInMonth(periodEndDate);
 
-      const daysInPeriod = differenceInDays(periodEndDate, loopStartDate) + 1;
-      const periodMonths = daysInPeriod / AVG_DAYS_IN_MONTH;
-      const totalPeriodAmount = currentRate * periodMonths;
+      const totalMonthsForPeriod = monthsInPeriod + partialMonthFraction;
+
+      const totalPeriodAmount = currentRate * 12;
 
       yearlyBreakdown.push({
         year: `سال ${yearlyBreakdown.length + 1}`,

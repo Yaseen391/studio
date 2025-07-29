@@ -20,6 +20,15 @@ const getDisclaimer = () => {
     return "This report is system-generated via the SDC: Smart Decree Calculator and requires no signature.";
 };
 
+const formatDate = (date: Date) => {
+    if (!date || isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('ur-PK-u-nu-latn', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+    });
+}
+
 export default function ReportPreview({ report }: ReportPreviewProps) {
   const reportRef = React.useRef<HTMLDivElement>(null);
 
@@ -150,11 +159,11 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
           <p><span className="highlight">رپورٹ تیار کنندہ:</span> {generatorLabel}</p>
           {report.reportGenerator.counselName && <p><span className="highlight">وکیل:</span> {report.reportGenerator.counselName}</p>}
           {report.partialSatisfaction && (
-            <p className="highlight">نوٹ: ڈیکری جزوی طور پر {report.partialSatisfaction.date.toLocaleDateString('ur-PK-u-nu-latn')} کو مطمئن ہو کر ریکارڈ روم میں داخل ہو گئی تھی۔ حسابات غیر ادا شدہ مدت {report.partialSatisfaction.effectiveStartDate.toLocaleDateString('ur-PK-u-nu-latn')} سے {report.period.endDate.toLocaleDateString('ur-PK-u-nu-latn')} تک کے ہیں۔</p>
+            <p className="highlight">نوٹ: ڈیکری جزوی طور پر {formatDate(report.partialSatisfaction.date)} کو مطمئن ہو کر ریکارڈ روم میں داخل ہو گئی تھی۔ حسابات غیر ادا شدہ مدت {formatDate(report.partialSatisfaction.effectiveStartDate)} سے {formatDate(report.period.endDate)} تک کے ہیں۔</p>
           )}
           <hr className="my-4"/>
           <h3 className="report-section-title">ڈیکریٹل رقوم کی تفصیلی رپورٹ</h3>
-          <p className="text-center"><span className="highlight">مدت:</span> {report.period.startDate.toLocaleDateString('ur-PK-u-nu-latn')} تا {report.period.endDate.toLocaleDateString('ur-PK-u-nu-latn')} ({report.period.periodDisplay})</p>
+          <p className="text-center"><span className="highlight">مدت:</span> {formatDate(report.period.startDate)} تا {formatDate(report.period.endDate)} ({report.period.periodDisplay})</p>
           
           <h3 className="report-section-title">دیکھ بھال کا حساب</h3>
           {report.recipientCalculations.map((rec, index) => (
@@ -174,7 +183,7 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
                   {rec.yearlyBreakdown.map((year, yIndex) => (
                     <TableRow key={yIndex}>
                       <TableCell>{year.year}</TableCell>
-                      <TableCell>{year.startDate.toLocaleDateString('ur-PK-u-nu-latn')} - {year.endDate.toLocaleDateString('ur-PK-u-nu-latn')}</TableCell>
+                      <TableCell>{formatDate(year.startDate)} - {formatDate(year.endDate)}</TableCell>
                       <TableCell>{year.basicAmount.toFixed(2)}</TableCell>
                       <TableCell>{year.increasedAmount.toFixed(2)}</TableCell>
                       <TableCell>{year.totalPeriod.toFixed(2)}</TableCell>
@@ -206,7 +215,7 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
                   <TableBody>
                       {report.payments.map((p, i) => (
                           <TableRow key={i}>
-                              <TableCell>{p.date.toLocaleDateString('ur-PK-u-nu-latn')}</TableCell>
+                              <TableCell>{formatDate(p.date)}</TableCell>
                               <TableCell>{p.amount.toFixed(2)}</TableCell>
                               {report.reportGenerator.generatedBy === 'judgment-debtor' && <TableCell>{p.receivedBy === 'decree-holder' ? 'ڈگری ہولڈر' : 'نمائندہ'}</TableCell>}
                           </TableRow>
