@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { ur } from 'date-fns/locale';
+import { ur } from 'date-fns/locale/ur';
 
 import { reportSchema } from '@/lib/validators';
 import { type Report, type CalculatedReport } from '@/lib/types';

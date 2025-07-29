@@ -67,7 +67,7 @@ export default function DashboardPage() {
       </header>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
-        <Link href="/report/new" passHref legacyBehavior>
+        <Link href="/report/new">
           <Button className="flex-1" size="lg"><Plus className="ml-2 h-5 w-5" /> نئی رپورٹ بنائیں</Button>
         </Link>
         <Button variant="outline" className="flex-1" size="lg" onClick={() => fileInputRef.current?.click()}>
@@ -141,7 +141,7 @@ export default function DashboardPage() {
           ) : (
             <div className="text-center py-12">
               <p className="text-muted-foreground">کوئی رپورٹ نہیں ملی۔</p>
-              <Link href="/report/new" passHref legacyBehavior>
+              <Link href="/report/new">
                   <Button className="mt-4">اپنی پہلی رپورٹ بنائیں</Button>
               </Link>
             </div>
