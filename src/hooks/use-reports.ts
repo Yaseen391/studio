@@ -8,6 +8,20 @@ const STORAGE_KEY = 'sdc-reports';
 
 const isServer = typeof window === 'undefined';
 
+const parseReportDates = (report: any): Report => {
+    return {
+        ...report,
+        startDate: new Date(report.startDate),
+        endDate: new Date(report.endDate),
+        createdAt: report.createdAt,
+        partialSatisfactionDate: report.partialSatisfactionDate ? new Date(report.partialSatisfactionDate) : undefined,
+        payments: report.payments?.map((p: any) => ({
+            ...p,
+            date: p.date ? new Date(p.date) : undefined,
+        })) || [],
+    };
+};
+
 export function useReports() {
   const [reports, setReports] = useState<Report[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -17,7 +31,8 @@ export function useReports() {
     try {
       const storedReports = localStorage.getItem(STORAGE_KEY);
       if (storedReports) {
-        setReports(JSON.parse(storedReports));
+        const parsedReports = JSON.parse(storedReports).map(parseReportDates);
+        setReports(parsedReports);
       }
     } catch (error) {
       console.error("Failed to load reports from local storage", error);
@@ -42,7 +57,7 @@ export function useReports() {
       createdAt: new Date().toISOString(),
     };
     const updatedReports = [newReport, ...reports];
-    setReports(updatedReports);
+    setReports(updatedReports.map(parseReportDates));
     saveReportsToStorage(updatedReports);
     return newReport;
   }, [reports, saveReportsToStorage]);
@@ -51,7 +66,7 @@ export function useReports() {
     const updatedReports = reports.map(report =>
       report.id === updatedReportData.id ? updatedReportData : report
     );
-    setReports(updatedReports);
+    setReports(updatedReports.map(parseReportDates));
     saveReportsToStorage(updatedReports);
     return updatedReportData;
   }, [reports, saveReportsToStorage]);
@@ -69,15 +84,16 @@ export function useReports() {
   const importReport = useCallback((reportData: any) => {
     // Basic validation
     if(reportData.id && reportData.partyA && reportData.partyB) {
+       const parsedReport = parseReportDates(reportData);
        // Check if already exists
-      const exists = reports.some(r => r.id === reportData.id);
+      const exists = reports.some(r => r.id === parsedReport.id);
       if (exists) {
         // Optionally update existing report
-        const updatedReports = reports.map(r => r.id === reportData.id ? reportData : r);
+        const updatedReports = reports.map(r => r.id === parsedReport.id ? parsedReport : r);
         setReports(updatedReports);
         saveReportsToStorage(updatedReports);
       } else {
-        const updatedReports = [reportData, ...reports];
+        const updatedReports = [parsedReport, ...reports];
         setReports(updatedReports);
         saveReportsToStorage(updatedReports);
       }
