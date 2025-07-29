@@ -183,7 +183,7 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
                   {rec.yearlyBreakdown.map((year, yIndex) => (
                     <TableRow key={yIndex}>
                       <TableCell>{year.year}</TableCell>
-                      <TableCell>{formatDate(year.startDate)} - {formatDate(year.endDate)}</TableCell>
+                      <TableCell>{year.durationDisplay}</TableCell>
                       <TableCell>{year.basicAmount.toFixed(2)}</TableCell>
                       <TableCell>{year.increasedAmount.toFixed(2)}</TableCell>
                       <TableCell>{year.totalPeriod.toFixed(2)}</TableCell>
