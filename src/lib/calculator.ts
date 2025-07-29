@@ -1,32 +1,29 @@
-import { differenceInDays, addDays, addYears, format, differenceInMonths, getDaysInMonth, startOfMonth, endOfMonth } from 'date-fns';
+import { differenceInDays, addDays, addYears, format, differenceInMonths, getDaysInMonth, startOfMonth, endOfMonth, isSameDay } from 'date-fns';
 import { type Report, type CalculatedReport, type YearlyBreakdown, type RecipientCalculation, type OtherAmount, type Payment } from './types';
 
 function getPeriodDisplay(startDate: Date, endDate: Date): string {
-    if (endDate < startDate) return "0 مہینے, 0 دن";
+    if (endDate < startDate) return "0 مہینے";
 
-    let totalMonths = differenceInMonths(endDate, startDate);
-    let tempDate = new Date(startDate);
-    tempDate.setMonth(tempDate.getMonth() + totalMonths);
+    const inclusiveEndDate = addDays(endDate, 1);
+    let totalMonths = differenceInMonths(inclusiveEndDate, startDate);
+    let tempDate = addYears(startDate, Math.floor(totalMonths / 12));
+    tempDate = new Date(tempDate.getFullYear(), tempDate.getMonth() + (totalMonths % 12), tempDate.getDate());
     
-    let daysDiff = differenceInDays(endDate, tempDate);
-
-    // Adjust if we've overshot the month
-    if (daysDiff < 0) {
-        totalMonths--;
-        tempDate = new Date(startDate);
-        tempDate.setMonth(tempDate.getMonth() + totalMonths);
-        daysDiff = differenceInDays(endDate, tempDate);
-    }
+    let daysDiff = differenceInDays(inclusiveEndDate, tempDate);
     
-    // Add 1 to days to make it inclusive
-    daysDiff += 1;
-
-    if (daysDiff >= getDaysInMonth(endDate)) {
+    if (daysDiff >= getDaysInMonth(tempDate)) {
         totalMonths++;
         daysDiff = 0;
     }
 
-    return `${totalMonths} مہینے, ${daysDiff} دن`;
+    if (daysDiff === 0) {
+        return `${totalMonths} مہینے`;
+    }
+    
+    const dayPart = `${daysDiff} دن`;
+    const monthPart = totalMonths > 0 ? `${totalMonths} مہینے, ` : '';
+    
+    return `${monthPart}${dayPart}`;
 }
 
 
@@ -57,54 +54,38 @@ export function calculateDecree(reportData: Omit<Report, 'id' | 'createdAt'>): C
     
     let currentRate = baseAmount;
     
-    // If partially satisfied, calculate the rate at the partial satisfaction date
-    if (partiallySatisfied && partialSatisfactionDate) {
-        let rateCalcDate = new Date(startDate);
-        let rateAtSatisfaction = baseAmount;
-        
-        while(addYears(rateCalcDate, 1) <= partialSatisfactionDate) {
-            if (increaseType === 'progressive') {
-                rateAtSatisfaction *= (1 + yearlyIncrease / 100);
-            } else { // fixed
-                rateAtSatisfaction += (baseAmount * yearlyIncrease / 100);
-            }
-            rateCalcDate = addYears(rateCalcDate, 1);
+    if (partiallySatisfied && partialSatisfactionDate && partialSatisfactionDate > startDate) {
+        let yearsPassed = differenceInMonths(partialSatisfactionDate, startDate) / 12;
+        if (increaseType === 'progressive') {
+            currentRate = baseAmount * Math.pow((1 + yearlyIncrease / 100), Math.floor(yearsPassed));
+        } else {
+            currentRate = baseAmount + (baseAmount * (yearlyIncrease / 100) * Math.floor(yearsPassed));
         }
-        currentRate = rateAtSatisfaction;
     }
 
     let loopStartDate = new Date(effectiveStartDate);
-    let firstAnniversary = new Date(startDate);
-    // Find the first anniversary that is after or on the loopStartDate
-    while(firstAnniversary < loopStartDate) {
-        firstAnniversary = addYears(firstAnniversary, 1);
-    }
 
     while (loopStartDate <= endDate) {
-      const anniversaryYear = loopStartDate.getFullYear();
-      let periodEndDate: Date;
-      let nextAnniversary = new Date(firstAnniversary);
-       // Ensure nextAnniversary is in the future relative to loopStartDate
-       while(nextAnniversary <= loopStartDate){
-          nextAnniversary = addYears(nextAnniversary, 1);
-       }
-       
-      if (nextAnniversary <= endDate) {
-          periodEndDate = addDays(nextAnniversary, -1);
-      } else {
-          periodEndDate = endDate;
-      }
+      const anniversaryYearStartDate = new Date(startDate.getFullYear() + (loopStartDate.getFullYear() - startDate.getFullYear()), startDate.getMonth(), startDate.getDate());
       
-      const monthsInPeriod = differenceInMonths(periodEndDate, loopStartDate);
-      const daysInLastMonth = differenceInDays(periodEndDate, addDays(startOfMonth(periodEndDate), -1));
-      const partialMonthFraction = daysInLastMonth / getDaysInMonth(periodEndDate);
+      let nextAnniversary = new Date(anniversaryYearStartDate);
+      if (nextAnniversary <= loopStartDate) {
+          nextAnniversary = addYears(nextAnniversary, 1);
+      }
 
-      const totalMonthsForPeriod = monthsInPeriod + partialMonthFraction;
+      const periodEndDate = new Date(Math.min(endDate.getTime(), addDays(nextAnniversary, -1).getTime()));
 
-      const totalPeriodAmount = currentRate * 12;
+      const months = differenceInMonths(periodEndDate, loopStartDate);
+      const daysInPeriod = differenceInDays(periodEndDate, addMonths(loopStartDate, months)) + 1;
+      const daysInMonth = getDaysInMonth(periodEndDate);
 
+      const periodDuration = months + (daysInPeriod / daysInMonth);
+      const totalPeriodAmount = currentRate * periodDuration;
+      
+      totalRecipientAmount += totalPeriodAmount;
+      
       yearlyBreakdown.push({
-        year: `سال ${yearlyBreakdown.length + 1}`,
+        year: `${yearlyBreakdown.length + 1} سال`,
         startDate: new Date(loopStartDate),
         endDate: new Date(periodEndDate),
         basicAmount: baseAmount,
@@ -113,14 +94,12 @@ export function calculateDecree(reportData: Omit<Report, 'id' | 'createdAt'>): C
         totalPeriod: totalPeriodAmount,
       });
 
-      totalRecipientAmount += totalPeriodAmount;
       loopStartDate = addDays(periodEndDate, 1);
       
-      // Apply increase for the next period
       if (loopStartDate <= endDate) {
           if (increaseType === 'progressive') {
             currentRate *= (1 + yearlyIncrease / 100);
-          } else { // fixed
+          } else { 
             currentRate += (baseAmount * yearlyIncrease / 100);
           }
       }

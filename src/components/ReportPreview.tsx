@@ -72,10 +72,12 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
               .report-section-title { font-size: 13pt; font-weight: bold; text-align: center; margin: 16px 0; background-color: #f0f4f8; padding: 8px; border-radius: 4px;}
               p, li { font-size: 12pt; line-height: 1.8; }
               table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-size: 11pt; page-break-inside: avoid; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: right; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
               th { background-color: #f2f2f2; }
               .highlight { font-weight: bold; }
               .no-print { display: none; }
+              .text-right { text-align: right; }
+              .recipient-info { text-align: right; margin-bottom: 1rem; }
             </style>
           </head>
           <body>
@@ -90,7 +92,6 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
       `);
       printWindow.document.close();
       printWindow.focus();
-      // Use timeout to ensure styles are loaded
       setTimeout(() => {
         printWindow.print();
         printWindow.close();
@@ -102,7 +103,6 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
     if (!reportRef.current) return;
     const elementToCapture = reportRef.current.cloneNode(true) as HTMLDivElement;
 
-    // Add footer for the image
     const footerDiv = document.createElement('div');
     footerDiv.style.fontSize = '10px';
     footerDiv.style.textAlign = 'center';
@@ -121,7 +121,6 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
       backgroundColor: '#ffffff',
       useCORS: true,
       onclone: (document) => {
-        // Set styles for capturing
         elementToCapture.style.padding = '20px';
         elementToCapture.style.width = '800px';
       }
@@ -136,11 +135,8 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
 
   const downloadPdf = () => {
     if (!reportRef.current) return;
-
-    // For PDF, we just trigger the print dialog which has "Save as PDF"
     printReport();
   };
-
 
   const generatorLabel = report.reportGenerator.generatedBy === 'decree-holder' ? 'ڈگری ہولڈر' : 'ججمنٹ ڈیٹر';
 
@@ -156,19 +152,23 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
           <p className="text-center"><strong>کیس کیٹیگری:</strong> فیملی ایگزیکیوشن پٹیشن</p>
           <p className="text-center"><strong>CMS نمبر:</strong> {report.caseDetails.cmsNo}</p>
           <br/>
-          <p><span className="highlight">رپورٹ تیار کنندہ:</span> {generatorLabel}</p>
-          {report.reportGenerator.counselName && <p><span className="highlight">وکیل:</span> {report.reportGenerator.counselName}</p>}
+          <p className="text-right"><span className="highlight">رپورٹ تیار کنندہ:</span> {generatorLabel}</p>
+          {report.reportGenerator.counselName && <p className="text-right"><span className="highlight">وکیل:</span> {report.reportGenerator.counselName}</p>}
           {report.partialSatisfaction && (
-            <p className="highlight">نوٹ: ڈیکری جزوی طور پر {formatDate(report.partialSatisfaction.date)} کو مطمئن ہو کر ریکارڈ روم میں داخل ہو گئی تھی۔ حسابات غیر ادا شدہ مدت {formatDate(report.partialSatisfaction.effectiveStartDate)} سے {formatDate(report.period.endDate)} تک کے ہیں۔</p>
+            <p className="highlight text-right">نوٹ: ڈیکری جزوی طور پر {formatDate(report.partialSatisfaction.date)} کو مطمئن ہو کر ریکارڈ روم میں داخل ہو گئی تھی۔ حسابات غیر ادا شدہ مدت {formatDate(report.partialSatisfaction.effectiveStartDate)} سے {formatDate(report.period.endDate)} تک کے ہیں۔</p>
           )}
           <hr className="my-4"/>
           <h3 className="report-section-title">ڈیکریٹل رقوم کی تفصیلی رپورٹ</h3>
           <p className="text-center"><span className="highlight">مدت:</span> {formatDate(report.period.startDate)} تا {formatDate(report.period.endDate)} ({report.period.periodDisplay})</p>
           
-          <h3 className="report-section-title">دیکھ بھال کا حساب</h3>
+          <h3 className="report-section-title">نان و نفقہ کا حساب</h3>
           {report.recipientCalculations.map((rec, index) => (
             <div key={index} className="mb-6">
-              <h4><span className="highlight">وصول کنندہ {index + 1}:</span> {rec.name} ({rec.relationship})</h4>
+              <div className="recipient-info">
+                  <h4 className="highlight">وصول کنندہ {index + 1}: {rec.name} ({rec.relationship})</h4>
+                  <p>بنیادی رقم: {rec.baseAmount.toFixed(2)} PKR/ماہ</p>
+                  <p>اضافہ کی قسم: {rec.increaseType === 'fixed' ? 'فکسڈ' : 'پروگریسو'} ({rec.yearlyIncrease}%)</p>
+              </div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -190,20 +190,21 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
                     </TableRow>
                   ))}
                   <TableRow className="font-bold">
-                    <TableCell colSpan={4}>کل برائے {rec.name}</TableCell>
+                    <TableCell colSpan={4} className="text-right">کل برائے {rec.name}</TableCell>
                     <TableCell>{rec.totalRecipientAmount.toFixed(2)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
+              <p className="text-right highlight mt-2">موجودہ ماہانہ رقم: {rec.currentMonthAmount.toFixed(2)} PKR</p>
             </div>
           ))}
 
           {report.otherAmounts.length > 0 && <>
               <h3 className="report-section-title">دیگر ڈیکریٹل رقوم</h3>
               <Table>
-                  <TableHeader><TableRow><TableHead>تفصیل</TableHead><TableHead>رقم (PKR)</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead className="text-right">تفصیل</TableHead><TableHead>رقم (PKR)</TableHead></TableRow></TableHeader>
                   <TableBody>
-                      {report.otherAmounts.map((oa, i) => <TableRow key={i}><TableCell>{oa.description}</TableCell><TableCell>{oa.amount.toFixed(2)}</TableCell></TableRow>)}
+                      {report.otherAmounts.map((oa, i) => <TableRow key={i}><TableCell className="text-right">{oa.description}</TableCell><TableCell>{oa.amount.toFixed(2)}</TableCell></TableRow>)}
                   </TableBody>
               </Table>
           </>}
@@ -227,11 +228,11 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
           <h3 className="report-section-title">خلاصہ</h3>
           <Table>
             <TableBody>
-              <TableRow><TableCell className="highlight">کل دیکھ بھال کا خرچ</TableCell><TableCell>PKR {report.summary.grandTotalMaintenance.toFixed(2)}</TableCell></TableRow>
-              <TableRow><TableCell className="highlight">کل دیگر ڈیکریٹل رقوم</TableCell><TableCell>PKR {report.summary.totalOtherAmounts.toFixed(2)}</TableCell></TableRow>
-              <TableRow className="bg-accent/20"><TableCell className="highlight">ادائیگیوں سے پہلے کل ڈیکریٹل رقم</TableCell><TableCell>PKR {report.summary.totalDecretalAmountBeforePayments.toFixed(2)}</TableCell></TableRow>
-              <TableRow><TableCell className="highlight">کل ادا شدہ رقم</TableCell><TableCell>PKR {report.summary.totalPayments.toFixed(2)}</TableCell></TableRow>
-              <TableRow className="bg-primary/20 text-lg font-bold"><TableCell className="highlight">حتمی بقایا ڈیکریٹل رقم</TableCell><TableCell>PKR {report.summary.finalOutstandingAmount.toFixed(2)}</TableCell></TableRow>
+              <TableRow><TableCell className="highlight text-right">کل نان و نفقہ کا خرچ</TableCell><TableCell>PKR {report.summary.grandTotalMaintenance.toFixed(2)}</TableCell></TableRow>
+              <TableRow><TableCell className="highlight text-right">کل دیگر ڈیکریٹل رقوم</TableCell><TableCell>PKR {report.summary.totalOtherAmounts.toFixed(2)}</TableCell></TableRow>
+              <TableRow className="bg-accent/20"><TableCell className="highlight text-right">ادائیگیوں سے پہلے کل ڈیکریٹل رقم</TableCell><TableCell>PKR {report.summary.totalDecretalAmountBeforePayments.toFixed(2)}</TableCell></TableRow>
+              <TableRow><TableCell className="highlight text-right">کل ادا شدہ رقم</TableCell><TableCell>PKR {report.summary.totalPayments.toFixed(2)}</TableCell></TableRow>
+              <TableRow className="bg-primary/20 text-lg font-bold"><TableCell className="highlight text-right">حتمی بقایا ڈیکریٹل رقم</TableCell><TableCell>PKR {report.summary.finalOutstandingAmount.toFixed(2)}</TableCell></TableRow>
             </TableBody>
           </Table>
 
