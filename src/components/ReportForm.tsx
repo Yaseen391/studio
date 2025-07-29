@@ -34,7 +34,8 @@ interface ReportFormProps {
   onCancel: () => void;
 }
 
-const formatDateForInput = (date: Date) => {
+const formatDateForInput = (date: Date | undefined) => {
+    if (!date) return "";
     return date.toLocaleDateString('ur-PK-u-nu-latn', {
         year: 'numeric',
         month: 'long',
@@ -62,7 +63,7 @@ export default function ReportForm({ initialData, onSave, onCancel }: ReportForm
       increaseType: 'progressive',
       yearlyIncrease: 10,
       recipients: [{ id: uuidv4(), name: '', relationship: '', amount: 0 }],
-      otherAmounts: [{ id: uuidv4(), description: '', amount: undefined }],
+      otherAmounts: [{ id: uuidv4(), description: '', amount: 0 }],
       payments: [],
       partiallySatisfied: false,
     },
@@ -346,7 +347,7 @@ const OtherDecretalAmountsForm = ({ form, fields, append, remove }: { form: any,
         <Button type="button" variant="destructive" size="sm" onClick={() => remove(index)}><Trash2 className="h-4 w-4 ml-2" /> حذف کریں</Button>
       </Card>
     ))}
-    <Button type="button" variant="outline" onClick={() => append({ id: uuidv4(), description: '', amount: undefined })}>
+    <Button type="button" variant="outline" onClick={() => append({ id: uuidv4(), description: '', amount: 0 })}>
       <PlusCircle className="h-4 w-4 ml-2" /> دیگر رقم شامل کریں
     </Button>
   </div>
@@ -404,7 +405,7 @@ const PaymentsForm = ({ form, fields, append, remove, reportGenerator }: { form:
         <Button type="button" variant="destructive" size="sm" onClick={() => remove(index)}><Trash2 className="h-4 w-4 ml-2" /> حذف کریں</Button>
       </Card>
     ))}
-    <Button type="button" variant="outline" onClick={() => append({ id: uuidv4(), date: undefined, amount: undefined, receivedBy: 'decree-holder' })}>
+    <Button type="button" variant="outline" onClick={() => append({ id: uuidv4(), date: undefined, amount: 0, receivedBy: 'decree-holder' })}>
       <PlusCircle className="h-4 w-4 ml-2" /> رقم شامل کریں
     </Button>
   </div>
