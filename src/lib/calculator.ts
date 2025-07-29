@@ -1,4 +1,4 @@
-import { differenceInDays, addDays, addYears, format, differenceInMonths, getDaysInMonth, startOfMonth, endOfMonth, isSameDay } from 'date-fns';
+import { differenceInDays, addDays, addYears, format, differenceInMonths, getDaysInMonth, startOfMonth, endOfMonth, isSameDay, addMonths } from 'date-fns';
 import { type Report, type CalculatedReport, type YearlyBreakdown, type RecipientCalculation, type OtherAmount, type Payment } from './types';
 
 function getPeriodDisplay(startDate: Date, endDate: Date): string {
@@ -16,14 +16,14 @@ function getPeriodDisplay(startDate: Date, endDate: Date): string {
         daysDiff = 0;
     }
 
-    if (daysDiff === 0) {
+    if (daysDiff === 0 && totalMonths > 0) {
         return `${totalMonths} مہینے`;
     }
     
-    const dayPart = `${daysDiff} دن`;
-    const monthPart = totalMonths > 0 ? `${totalMonths} مہینے, ` : '';
+    const dayPart = daysDiff > 0 ? `${daysDiff} دن` : '';
+    const monthPart = totalMonths > 0 ? `${totalMonths} مہینے` : '';
     
-    return `${monthPart}${dayPart}`;
+    return [monthPart, dayPart].filter(Boolean).join(', ');
 }
 
 
