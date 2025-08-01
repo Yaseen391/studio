@@ -24,22 +24,22 @@ const parseReportDates = (report: any): Report => {
 };
 
 export function useReports() {
-  const [reports, setReports] = useState<Report[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (isServer) return;
+  const [reports, setReports] = useState<Report[]>(() => {
+    if (isServer) return [];
     try {
       const storedReports = localStorage.getItem(STORAGE_KEY);
       if (storedReports) {
-        const parsedReports = JSON.parse(storedReports).map(parseReportDates);
-        setReports(parsedReports);
+        return JSON.parse(storedReports).map(parseReportDates);
       }
     } catch (error) {
       console.error("Failed to load reports from local storage", error);
-    } finally {
-        setIsLoading(false);
     }
+    return [];
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsLoading(false);
   }, []);
 
   const saveReportsToStorage = useCallback((updatedReports: Report[]) => {
@@ -64,26 +64,34 @@ export function useReports() {
       id: uuidv4(),
       createdAt: new Date().toISOString(),
     };
-    const updatedReports = [newReport, ...reports];
-    setReports(updatedReports.map(parseReportDates));
-    saveReportsToStorage(updatedReports);
+    
+    setReports(prevReports => {
+        const updatedReports = [newReport, ...prevReports];
+        saveReportsToStorage(updatedReports);
+        return updatedReports.map(parseReportDates);
+    });
+
     return newReport;
-  }, [reports, saveReportsToStorage]);
+  }, [saveReportsToStorage]);
 
   const updateReport = useCallback((updatedReportData: Report) => {
-    const updatedReports = reports.map(report =>
-      report.id === updatedReportData.id ? {...updatedReportData, startDate: new Date(updatedReportData.startDate), endDate: new Date(updatedReportData.endDate)} : report
-    );
-    setReports(updatedReports.map(parseReportDates));
-    saveReportsToStorage(updatedReports);
+    setReports(prevReports => {
+        const updatedReports = prevReports.map(report =>
+          report.id === updatedReportData.id ? {...updatedReportData, startDate: new Date(updatedReportData.startDate), endDate: new Date(updatedReportData.endDate)} : report
+        );
+        saveReportsToStorage(updatedReports);
+        return updatedReports.map(parseReportDates);
+    });
     return updatedReportData;
-  }, [reports, saveReportsToStorage]);
+  }, [saveReportsToStorage]);
 
   const deleteReport = useCallback((reportId: string) => {
-    const updatedReports = reports.filter(report => report.id !== reportId);
-    setReports(updatedReports);
-    saveReportsToStorage(updatedReports);
-  }, [reports, saveReportsToStorage]);
+    setReports(prevReports => {
+        const updatedReports = prevReports.filter(report => report.id !== reportId);
+        saveReportsToStorage(updatedReports);
+        return updatedReports;
+    });
+  }, [saveReportsToStorage]);
   
   const getReportById = useCallback((reportId: string) => {
     const report = reports.find(report => report.id === reportId);
@@ -99,53 +107,57 @@ export function useReports() {
 
       const parsedReport = parseReportDates(reportData);
       
-      const exists = reports.some(r => r.id === parsedReport.id);
-      let updatedReports;
-      if (exists) {
-        updatedReports = reports.map(r => r.id === parsedReport.id ? parsedReport : r);
-      } else {
-        updatedReports = [parsedReport, ...reports];
-      }
-      setReports(updatedReports.map(parseReportDates));
-      saveReportsToStorage(updatedReports);
+      setReports(prevReports => {
+          const exists = prevReports.some(r => r.id === parsedReport.id);
+          let updatedReports;
+          if (exists) {
+            updatedReports = prevReports.map(r => r.id === parsedReport.id ? parsedReport : r);
+          } else {
+            updatedReports = [parsedReport, ...prevReports];
+          }
+          saveReportsToStorage(updatedReports);
+          return updatedReports.map(parseReportDates);
+      });
       return true;
     } catch (e) {
       console.error("Import failed: Invalid report data", e);
       return false;
     }
-  }, [reports, saveReportsToStorage]);
+  }, [saveReportsToStorage]);
 
   const importReports = useCallback((reportsData: any[]) => {
     try {
         let successfulImports = 0;
-        let currentReports = [...reports];
 
-        reportsData.forEach(reportData => {
-            try {
-                const { id, createdAt, ...dataToValidate } = reportData;
-                reportSchema.parse(dataToValidate);
-                const parsedReport = parseReportDates(reportData);
-                const existsIndex = currentReports.findIndex(r => r.id === parsedReport.id);
+        setReports(prevReports => {
+            let currentReports = [...prevReports];
+            reportsData.forEach(reportData => {
+                try {
+                    const { id, createdAt, ...dataToValidate } = reportData;
+                    reportSchema.parse(dataToValidate);
+                    const parsedReport = parseReportDates(reportData);
+                    const existsIndex = currentReports.findIndex(r => r.id === parsedReport.id);
 
-                if (existsIndex > -1) {
-                    currentReports[existsIndex] = parsedReport;
-                } else {
-                    currentReports.unshift(parsedReport);
+                    if (existsIndex > -1) {
+                        currentReports[existsIndex] = parsedReport;
+                    } else {
+                        currentReports.unshift(parsedReport);
+                    }
+                    successfulImports++;
+                } catch (e) {
+                    console.error("Skipping invalid report during bulk import:", reportData.cmsNo || 'Unknown', e);
                 }
-                successfulImports++;
-            } catch (e) {
-                console.error("Skipping invalid report during bulk import:", reportData.cmsNo || 'Unknown', e);
-            }
+            });
+            saveReportsToStorage(currentReports);
+            return currentReports.map(parseReportDates);
         });
         
-        setReports(currentReports.map(parseReportDates));
-        saveReportsToStorage(currentReports);
         return successfulImports > 0;
     } catch (e) {
         console.error("Bulk import failed", e);
         return false;
     }
-  }, [reports, saveReportsToStorage]);
+  }, [saveReportsToStorage]);
 
 
   return { reports, isLoading, addReport, updateReport, deleteReport, getReportById, importReport, importReports };
