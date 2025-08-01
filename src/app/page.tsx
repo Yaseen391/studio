@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useRef, useEffect } from 'react';
@@ -123,13 +124,17 @@ export default function DashboardPage() {
   };
   
   if (isAuthLoading) {
-     return <div className="flex justify-center items-center h-screen"> لوڈ ہو رہا ہے...</div>
+    return <div className="flex justify-center items-center h-screen"> لوڈ ہو رہا ہے...</div>;
+  }
+  
+  if (!user) {
+    // This can happen briefly before the redirect to /setup.
+    return <div className="flex justify-center items-center h-screen"> لوڈ ہو رہا ہے...</div>;
   }
   
   if (!isAuthenticated) {
      return <PinEntry />;
   }
-
 
   return (
     <main className="container mx-auto p-4 md:p-8">
@@ -198,7 +203,8 @@ export default function DashboardPage() {
                                 <AlertDialogTrigger asChild>
                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title="حذف کریں">
                                         <Trash2 className="h-4 w-4" />
-                                    </AlertDialogTrigger>
+                                    </Button>
+                                </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
                                     <AlertDialogTitle>کیا آپ کو یقین ہے؟</AlertDialogTitle>
