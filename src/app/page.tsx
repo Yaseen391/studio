@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useReports } from '@/hooks/use-reports';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, Edit, Eye, Plus, Trash2, Upload, Files, Calculator, Scale } from 'lucide-react';
+import { Download, Edit, Eye, Plus, Trash2, Upload, Files, Scale, Calculator } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
+import PinEntry from '@/components/PinEntry';
 
 export default function DashboardPage() {
   const { reports, isLoading, deleteReport, importReports, importReport } = useReports();
@@ -17,7 +19,14 @@ export default function DashboardPage() {
   const multipleFileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const router = useRouter();
-
+  const { user, isAuthenticated, isAuthLoading, checkPin } = useAuth();
+  
+  useEffect(() => {
+    if (!isAuthLoading && !user) {
+      router.push('/setup');
+    }
+  }, [user, isAuthLoading, router]);
+  
   const handleSingleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -72,7 +81,6 @@ export default function DashboardPage() {
 
       Promise.all(readers)
         .then(results => {
-          // Handle single file with array of reports
           if(results.length === 1 && Array.isArray(results[0])) {
             const reportsToImport = results[0];
             if(importReports(reportsToImport)) {
@@ -80,8 +88,8 @@ export default function DashboardPage() {
             } else {
                toast({ variant: "destructive", title: "خرابی", description: "کچھ رپورٹس درآمد نہیں ہو سکیں۔" });
             }
-          } else { // Handle multiple report files
-            if(importReports(results)) {
+          } else { 
+            if(importReports(results as any[])) {
                toast({ title: "کامیابی", description: `${results.length} رپورٹس کامیابی سے درآمد ہو گئیں۔` });
             } else {
                toast({ variant: "destructive", title: "خرابی", description: "کچھ رپورٹس درآمد نہیں ہو سکیں۔" });
@@ -113,6 +121,14 @@ export default function DashboardPage() {
     link.download = `all-sdc-reports-${new Date().toISOString().split('T')[0]}.json`;
     link.click();
   };
+  
+  if (isAuthLoading) {
+     return <div className="flex justify-center items-center h-screen"> لوڈ ہو رہا ہے...</div>
+  }
+  
+  if (!isAuthenticated) {
+     return <PinEntry />;
+  }
 
 
   return (
@@ -182,8 +198,7 @@ export default function DashboardPage() {
                                 <AlertDialogTrigger asChild>
                                     <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" title="حذف کریں">
                                         <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </AlertDialogTrigger>
+                                    </AlertDialogTrigger>
                                 <AlertDialogContent>
                                     <AlertDialogHeader>
                                     <AlertDialogTitle>کیا آپ کو یقین ہے؟</AlertDialogTitle>

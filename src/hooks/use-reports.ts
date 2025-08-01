@@ -53,8 +53,14 @@ export function useReports() {
   }, []);
 
   const addReport = useCallback((newReportData: Omit<Report, 'id' | 'createdAt'>) => {
-    const newReport: Report = {
+    const newReportWithDates = {
       ...newReportData,
+      startDate: new Date(newReportData.startDate),
+      endDate: new Date(newReportData.endDate),
+    }
+
+    const newReport: Report = {
+      ...newReportWithDates,
       id: uuidv4(),
       createdAt: new Date().toISOString(),
     };
@@ -66,7 +72,7 @@ export function useReports() {
 
   const updateReport = useCallback((updatedReportData: Report) => {
     const updatedReports = reports.map(report =>
-      report.id === updatedReportData.id ? updatedReportData : report
+      report.id === updatedReportData.id ? {...updatedReportData, startDate: new Date(updatedReportData.startDate), endDate: new Date(updatedReportData.endDate)} : report
     );
     setReports(updatedReports.map(parseReportDates));
     saveReportsToStorage(updatedReports);
@@ -80,7 +86,9 @@ export function useReports() {
   }, [reports, saveReportsToStorage]);
   
   const getReportById = useCallback((reportId: string) => {
-    return reports.find(report => report.id === reportId);
+    const report = reports.find(report => report.id === reportId);
+    if(report) return parseReportDates(report);
+    return undefined;
   }, [reports]);
 
   const importReport = useCallback((reportData: any) => {
