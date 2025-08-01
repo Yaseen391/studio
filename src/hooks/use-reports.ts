@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { type Report } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import { reportSchema } from '@/lib/validators';
 
 const STORAGE_KEY = 'sdc-reports';
 
@@ -44,7 +45,8 @@ export function useReports() {
   const saveReportsToStorage = useCallback((updatedReports: Report[]) => {
     if (isServer) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedReports));
+      const sortedReports = updatedReports.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sortedReports));
     } catch (error) {
       console.error("Failed to save reports to local storage", error);
     }
@@ -82,25 +84,61 @@ export function useReports() {
   }, [reports]);
 
   const importReport = useCallback((reportData: any) => {
-    // Basic validation
-    if(reportData.id && reportData.partyA && reportData.partyB) {
-       const parsedReport = parseReportDates(reportData);
-       // Check if already exists
+    try {
+      // Validate against Zod schema, ignoring ID and createdAt for this check
+      const { id, createdAt, ...dataToValidate } = reportData;
+      reportSchema.parse(dataToValidate);
+
+      const parsedReport = parseReportDates(reportData);
+      
       const exists = reports.some(r => r.id === parsedReport.id);
+      let updatedReports;
       if (exists) {
-        // Optionally update existing report
-        const updatedReports = reports.map(r => r.id === parsedReport.id ? parsedReport : r);
-        setReports(updatedReports);
-        saveReportsToStorage(updatedReports);
+        updatedReports = reports.map(r => r.id === parsedReport.id ? parsedReport : r);
       } else {
-        const updatedReports = [parsedReport, ...reports];
-        setReports(updatedReports);
-        saveReportsToStorage(updatedReports);
+        updatedReports = [parsedReport, ...reports];
       }
+      setReports(updatedReports.map(parseReportDates));
+      saveReportsToStorage(updatedReports);
       return true;
+    } catch (e) {
+      console.error("Import failed: Invalid report data", e);
+      return false;
     }
-    return false;
   }, [reports, saveReportsToStorage]);
 
-  return { reports, isLoading, addReport, updateReport, deleteReport, getReportById, importReport };
+  const importReports = useCallback((reportsData: any[]) => {
+    try {
+        let successfulImports = 0;
+        let currentReports = [...reports];
+
+        reportsData.forEach(reportData => {
+            try {
+                const { id, createdAt, ...dataToValidate } = reportData;
+                reportSchema.parse(dataToValidate);
+                const parsedReport = parseReportDates(reportData);
+                const existsIndex = currentReports.findIndex(r => r.id === parsedReport.id);
+
+                if (existsIndex > -1) {
+                    currentReports[existsIndex] = parsedReport;
+                } else {
+                    currentReports.unshift(parsedReport);
+                }
+                successfulImports++;
+            } catch (e) {
+                console.error("Skipping invalid report during bulk import:", reportData.cmsNo || 'Unknown', e);
+            }
+        });
+        
+        setReports(currentReports.map(parseReportDates));
+        saveReportsToStorage(currentReports);
+        return successfulImports > 0;
+    } catch (e) {
+        console.error("Bulk import failed", e);
+        return false;
+    }
+  }, [reports, saveReportsToStorage]);
+
+
+  return { reports, isLoading, addReport, updateReport, deleteReport, getReportById, importReport, importReports };
 }

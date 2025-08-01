@@ -1,29 +1,18 @@
-import { differenceInDays, addDays, addYears, format, differenceInMonths, getDaysInMonth, startOfMonth, endOfMonth, isSameDay, addMonths } from 'date-fns';
+import { differenceInDays, addDays, addYears, differenceInMonths, getDaysInMonth, addMonths } from 'date-fns';
 import { type Report, type CalculatedReport, type YearlyBreakdown, type RecipientCalculation, type OtherAmount, type Payment } from './types';
 
 function getPeriodDisplay(startDate: Date, endDate: Date): string {
-    if (endDate < startDate) return "0 مہینے";
+    const inclusiveEndDate = addDays(new Date(endDate), 1);
+    const totalMonths = differenceInMonths(inclusiveEndDate, new Date(startDate));
+    const remainingDays = differenceInDays(inclusiveEndDate, addMonths(new Date(startDate), totalMonths));
 
-    const inclusiveEndDate = addDays(endDate, 1);
-    let totalMonths = differenceInMonths(inclusiveEndDate, startDate);
-    let tempDate = addYears(startDate, Math.floor(totalMonths / 12));
-    tempDate = new Date(tempDate.getFullYear(), tempDate.getMonth() + (totalMonths % 12), tempDate.getDate());
-    
-    let daysDiff = differenceInDays(inclusiveEndDate, tempDate);
-    
-    if (daysDiff >= getDaysInMonth(tempDate)) {
-        totalMonths++;
-        daysDiff = 0;
-    }
-
-    if (daysDiff === 0 && totalMonths > 0) {
-        return `${totalMonths} مہینے`;
-    }
-    
-    const dayPart = daysDiff > 0 ? `${daysDiff} دن` : '';
     const monthPart = totalMonths > 0 ? `${totalMonths} مہینے` : '';
+    // Show days only if there are any and it's not a full month adding up
+    const dayPart = remainingDays > 0 ? `${remainingDays} دن` : '';
     
-    return [monthPart, dayPart].filter(Boolean).join(', ');
+    if (monthPart && !dayPart) return monthPart;
+
+    return [monthPart, dayPart].filter(Boolean).join('، ');
 }
 
 
@@ -76,7 +65,7 @@ export function calculateDecree(reportData: Omit<Report, 'id' | 'createdAt'>): C
       const periodEndDate = new Date(Math.min(endDate.getTime(), addDays(nextAnniversary, -1).getTime()));
 
       const months = differenceInMonths(periodEndDate, loopStartDate);
-      const daysInPeriod = differenceInDays(periodEndDate, addMonths(loopStartDate, months)) + 1;
+      const daysInPeriod = differenceInDays(addDays(periodEndDate, 1), addMonths(loopStartDate, months));
       const daysInMonth = getDaysInMonth(periodEndDate);
 
       const periodDuration = months + (daysInPeriod / daysInMonth);

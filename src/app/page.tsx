@@ -1,24 +1,24 @@
 "use client";
 
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import Link from 'next/link';
 import { useReports } from '@/hooks/use-reports';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { SdcLogo } from '@/components/icons/SdcLogo';
-import { Download, Edit, Eye, Plus, Trash2, Upload } from 'lucide-react';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Download, Edit, Eye, Plus, Trash2, Upload, Files, Calculator, Scale } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
-  const { reports, isLoading, deleteReport, importReport } = useReports();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { reports, isLoading, deleteReport, importReports, importReport } = useReports();
+  const singleFileInputRef = useRef<HTMLInputElement>(null);
+  const multipleFileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const router = useRouter();
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSingleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -47,6 +47,52 @@ export default function DashboardPage() {
       reader.readAsText(file);
     }
   };
+
+  const handleMultipleFilesUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files) {
+      const readers = Array.from(files).map(file => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            try {
+              const content = e.target?.result;
+              if (typeof content === 'string') {
+                const reportData = JSON.parse(content);
+                resolve(reportData);
+              }
+            } catch (error) {
+              reject(new Error(`File ${file.name} is corrupted.`));
+            }
+          };
+          reader.onerror = () => reject(new Error(`Failed to read file ${file.name}.`));
+          reader.readAsText(file);
+        });
+      });
+
+      Promise.all(readers)
+        .then(results => {
+          // Handle single file with array of reports
+          if(results.length === 1 && Array.isArray(results[0])) {
+            const reportsToImport = results[0];
+            if(importReports(reportsToImport)) {
+               toast({ title: "کامیابی", description: `${reportsToImport.length} رپورٹس کامیابی سے درآمد ہو گئیں۔` });
+            } else {
+               toast({ variant: "destructive", title: "خرابی", description: "کچھ رپورٹس درآمد نہیں ہو سکیں۔" });
+            }
+          } else { // Handle multiple report files
+            if(importReports(results)) {
+               toast({ title: "کامیابی", description: `${results.length} رپورٹس کامیابی سے درآمد ہو گئیں۔` });
+            } else {
+               toast({ variant: "destructive", title: "خرابی", description: "کچھ رپورٹس درآمد نہیں ہو سکیں۔" });
+            }
+          }
+        })
+        .catch(error => {
+          toast({ variant: "destructive", title: "خرابی", description: error.message });
+        });
+    }
+  };
   
   const downloadReport = (report: any) => {
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
@@ -58,22 +104,42 @@ export default function DashboardPage() {
     link.click();
   };
 
+  const downloadAllReports = () => {
+    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
+      JSON.stringify(reports, null, 2)
+    )}`;
+    const link = document.createElement("a");
+    link.href = jsonString;
+    link.download = `all-sdc-reports-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+  };
+
+
   return (
     <main className="container mx-auto p-4 md:p-8">
       <header className="flex flex-col items-center text-center mb-8">
-        <SdcLogo className="w-24 h-24 mb-4" />
-        <h1 className="text-4xl font-headline font-bold">ایس ڈی سی: اسمارٹ ڈیکری کیلکولیٹر</h1>
-        <p className="text-muted-foreground mt-2">اپنی ڈیکری کی رقوم کا حساب لگائیں، محفوظ کریں اور ان کا نظم کریں</p>
+        <h1 className="text-4xl font-headline font-bold flex items-center gap-4">
+          <Calculator className="w-10 h-10" />
+          سمارٹ ڈگری کیلکولیٹر
+          <Scale className="w-10 h-10" />
+        </h1>
       </header>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Link href="/report/new" passHref>
-           <Button className="flex-1" size="lg"><Plus className="ml-2 h-5 w-5" /> نئی رپورٹ بنائیں</Button>
+           <Button className="w-full" size="lg"><Plus className="ml-2 h-5 w-5" /> نئی رپورٹ بنائیں</Button>
         </Link>
-        <Button variant="outline" className="flex-1" size="lg" onClick={() => fileInputRef.current?.click()}>
-          <Upload className="ml-2 h-5 w-5" /> رپورٹ اپ لوڈ کریں (.json)
+        <Button variant="outline" className="w-full" size="lg" onClick={() => singleFileInputRef.current?.click()}>
+          <Upload className="ml-2 h-5 w-5" /> رپورٹ اپ لوڈ کریں
         </Button>
-        <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept=".json" />
+        <Button variant="outline" className="w-full" size="lg" onClick={() => multipleFileInputRef.current?.click()}>
+          <Files className="ml-2 h-5 w-5" /> تمام رپورٹس اپ لوڈ کریں
+        </Button>
+        <Button variant="outline" className="w-full" size="lg" onClick={downloadAllReports}>
+          <Download className="ml-2 h-5 w-5" /> تمام رپورٹس ڈاؤن لوڈ کریں
+        </Button>
+        <input type="file" ref={singleFileInputRef} onChange={handleSingleFileUpload} className="hidden" accept=".json" />
+        <input type="file" ref={multipleFileInputRef} onChange={handleMultipleFilesUpload} className="hidden" accept=".json" multiple />
       </div>
 
       <Card>
@@ -89,20 +155,20 @@ export default function DashboardPage() {
                 <Table>
                 <TableHeader>
                     <TableRow>
-                    <TableHead>نمبر شمار</TableHead>
-                    <TableHead>عنوان مقدمہ</TableHead>
-                    <TableHead>CMS نمبر</TableHead>
-                    <TableHead className="text-left">کارروائیاں</TableHead>
+                    <TableHead className="text-center">نمبر شمار</TableHead>
+                    <TableHead className="text-center">عنوان مقدمہ</TableHead>
+                    <TableHead className="text-center">CMS نمبر</TableHead>
+                    <TableHead className="text-center">کارروائیاں</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {reports.map((report, index) => (
                     <TableRow key={report.id}>
-                        <TableCell>{index + 1}</TableCell>
-                        <TableCell>{report.partyA} بنام {report.partyB}</TableCell>
-                        <TableCell>{report.cmsNo}</TableCell>
+                        <TableCell className="text-center">{index + 1}</TableCell>
+                        <TableCell className="text-center">{report.partyA} بنام {report.partyB}</TableCell>
+                        <TableCell className="text-center">{report.cmsNo}</TableCell>
                         <TableCell>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 justify-center">
                             <Button variant="ghost" size="icon" onClick={() => router.push(`/report/${report.id}?preview=true`)} title="دیکھیں">
                                 <Eye className="h-4 w-4" />
                             </Button>
@@ -141,7 +207,7 @@ export default function DashboardPage() {
           ) : (
             <div className="text-center py-12">
               <p className="text-muted-foreground">کوئی رپورٹ نہیں ملی۔</p>
-              <Link href="/report/new">
+              <Link href="/report/new" passHref>
                   <Button className="mt-4">اپنی پہلی رپورٹ بنائیں</Button>
               </Link>
             </div>

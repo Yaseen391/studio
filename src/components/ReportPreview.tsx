@@ -22,7 +22,8 @@ const getDisclaimer = () => {
 
 const formatDate = (date: Date) => {
     if (!date || isNaN(date.getTime())) return '';
-    return date.toLocaleDateString('ur-PK-u-nu-latn', {
+    const d = new Date(date);
+    return d.toLocaleDateString('ur-PK-u-nu-latn', {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
@@ -172,26 +173,26 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>سال</TableHead>
-                    <TableHead>مدت</TableHead>
-                    <TableHead>بنیادی رقم</TableHead>
-                    <TableHead>اضافہ شدہ رقم</TableHead>
-                    <TableHead>کل رقم</TableHead>
+                    <TableHead className="text-center">سال</TableHead>
+                    <TableHead className="text-center">مدت</TableHead>
+                    <TableHead className="text-center">بنیادی رقم</TableHead>
+                    <TableHead className="text-center">اضافہ شدہ رقم</TableHead>
+                    <TableHead className="text-center">کل رقم</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {rec.yearlyBreakdown.map((year, yIndex) => (
                     <TableRow key={yIndex}>
-                      <TableCell>{year.year}</TableCell>
-                      <TableCell>{year.durationDisplay}</TableCell>
-                      <TableCell>{year.basicAmount.toFixed(2)}</TableCell>
-                      <TableCell>{year.increasedAmount.toFixed(2)}</TableCell>
-                      <TableCell>{year.totalPeriod.toFixed(2)}</TableCell>
+                      <TableCell className="text-center">{year.year}</TableCell>
+                      <TableCell className="text-center">{year.durationDisplay}</TableCell>
+                      <TableCell className="text-center">{year.basicAmount.toFixed(2)}</TableCell>
+                      <TableCell className="text-center">{year.increasedAmount.toFixed(2)}</TableCell>
+                      <TableCell className="text-center">{year.totalPeriod.toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
                   <TableRow className="font-bold">
                     <TableCell colSpan={4} className="text-right">کل برائے {rec.name}</TableCell>
-                    <TableCell>{rec.totalRecipientAmount.toFixed(2)}</TableCell>
+                    <TableCell className="text-center">{rec.totalRecipientAmount.toFixed(2)}</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -202,9 +203,9 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
           {report.otherAmounts.length > 0 && <>
               <h3 className="report-section-title">دیگر ڈیکریٹل رقوم</h3>
               <Table>
-                  <TableHeader><TableRow><TableHead className="text-right">تفصیل</TableHead><TableHead>رقم (PKR)</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead className="text-right">تفصیل</TableHead><TableHead className="text-center">رقم (PKR)</TableHead></TableRow></TableHeader>
                   <TableBody>
-                      {report.otherAmounts.map((oa, i) => <TableRow key={i}><TableCell className="text-right">{oa.description}</TableCell><TableCell>{oa.amount.toFixed(2)}</TableCell></TableRow>)}
+                      {report.otherAmounts.map((oa, i) => <TableRow key={i}><TableCell className="text-right">{oa.description}</TableCell><TableCell className="text-center">{oa.amount.toFixed(2)}</TableCell></TableRow>)}
                   </TableBody>
               </Table>
           </>}
@@ -212,13 +213,13 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
           {report.payments.length > 0 && <>
               <h3 className="report-section-title">وصول شدہ / جمع شدہ رقوم</h3>
               <Table>
-                  <TableHeader><TableRow><TableHead>تاریخ</TableHead><TableHead>رقم (PKR)</TableHead>{report.reportGenerator.generatedBy === 'judgment-debtor' && <TableHead>وصول کنندہ</TableHead>}</TableRow></TableHeader>
+                  <TableHeader><TableRow><TableHead className="text-center">تاریخ</TableHead><TableHead className="text-center">رقم (PKR)</TableHead>{report.reportGenerator.generatedBy === 'judgment-debtor' && <TableHead className="text-center">وصول کنندہ</TableHead>}</TableRow></TableHeader>
                   <TableBody>
                       {report.payments.map((p, i) => (
                           <TableRow key={i}>
-                              <TableCell>{formatDate(p.date)}</TableCell>
-                              <TableCell>{p.amount.toFixed(2)}</TableCell>
-                              {report.reportGenerator.generatedBy === 'judgment-debtor' && <TableCell>{p.receivedBy === 'decree-holder' ? 'ڈگری ہولڈر' : 'نمائندہ'}</TableCell>}
+                              <TableCell className="text-center">{formatDate(p.date)}</TableCell>
+                              <TableCell className="text-center">{p.amount.toFixed(2)}</TableCell>
+                              {report.reportGenerator.generatedBy === 'judgment-debtor' && <TableCell className="text-center">{p.receivedBy === 'decree-holder' ? 'ڈگری ہولڈر' : 'نمائندہ'}</TableCell>}
                           </TableRow>
                       ))}
                   </TableBody>
@@ -228,11 +229,11 @@ export default function ReportPreview({ report }: ReportPreviewProps) {
           <h3 className="report-section-title">خلاصہ</h3>
           <Table>
             <TableBody>
-              <TableRow><TableCell className="highlight text-right">کل نان و نفقہ کا خرچ</TableCell><TableCell>PKR {report.summary.grandTotalMaintenance.toFixed(2)}</TableCell></TableRow>
-              <TableRow><TableCell className="highlight text-right">کل دیگر ڈیکریٹل رقوم</TableCell><TableCell>PKR {report.summary.totalOtherAmounts.toFixed(2)}</TableCell></TableRow>
-              <TableRow className="bg-accent/20"><TableCell className="highlight text-right">ادائیگیوں سے پہلے کل ڈیکریٹل رقم</TableCell><TableCell>PKR {report.summary.totalDecretalAmountBeforePayments.toFixed(2)}</TableCell></TableRow>
-              <TableRow><TableCell className="highlight text-right">کل ادا شدہ رقم</TableCell><TableCell>PKR {report.summary.totalPayments.toFixed(2)}</TableCell></TableRow>
-              <TableRow className="bg-primary/20 text-lg font-bold"><TableCell className="highlight text-right">حتمی بقایا ڈیکریٹل رقم</TableCell><TableCell>PKR {report.summary.finalOutstandingAmount.toFixed(2)}</TableCell></TableRow>
+              <TableRow><TableCell className="highlight text-right">کل نان و نفقہ کا خرچ</TableCell><TableCell className="text-center">PKR {report.summary.grandTotalMaintenance.toFixed(2)}</TableCell></TableRow>
+              <TableRow><TableCell className="highlight text-right">کل دیگر ڈیکریٹل رقوم</TableCell><TableCell className="text-center">PKR {report.summary.totalOtherAmounts.toFixed(2)}</TableCell></TableRow>
+              <TableRow className="bg-accent/20"><TableCell className="highlight text-right">ادائیگیوں سے پہلے کل ڈیکریٹل رقم</TableCell><TableCell className="text-center">PKR {report.summary.totalDecretalAmountBeforePayments.toFixed(2)}</TableCell></TableRow>
+              <TableRow><TableCell className="highlight text-right">کل ادا شدہ رقم</TableCell><TableCell className="text-center">PKR {report.summary.totalPayments.toFixed(2)}</TableCell></TableRow>
+              <TableRow className="bg-primary/20 text-lg font-bold"><TableCell className="highlight text-right">حتمی بقایا ڈیکریٹل رقم</TableCell><TableCell className="text-center">PKR {report.summary.finalOutstandingAmount.toFixed(2)}</TableCell></TableRow>
             </TableBody>
           </Table>
 

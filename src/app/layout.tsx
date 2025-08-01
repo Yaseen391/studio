@@ -2,6 +2,7 @@ import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import Script from 'next/script';
+import ScrollButtons from '@/components/ScrollButtons';
 
 const APP_NAME = "SDC: Smart Decree Calculator";
 const APP_DESCRIPTION = "A smart calculator for decree amounts in family court cases.";
@@ -45,6 +46,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         {children}
         <Toaster />
+        <ScrollButtons />
       </body>
     </html>
   );
