@@ -7,12 +7,15 @@ import { useReports } from '@/hooks/use-reports';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Download, Edit, Eye, Plus, Trash2, Upload, Files, Scale, Calculator } from 'lucide-react';
+import { Download, Edit, Eye, Plus, Trash2, Upload, Files, Scale, Calculator, Settings, LogOut } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, AlertDialogFooter } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import PinEntry from '@/components/PinEntry';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 export default function DashboardPage() {
   const { reports, isLoading, deleteReport, importReports, importReport } = useReports();
@@ -20,7 +23,7 @@ export default function DashboardPage() {
   const multipleFileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const router = useRouter();
-  const { user, isAuthenticated, isAuthLoading, checkPin } = useAuth();
+  const { user, isAuthenticated, isAuthLoading, logout } = useAuth();
   
   useEffect(() => {
     if (!isAuthLoading && !user) {
@@ -114,6 +117,14 @@ export default function DashboardPage() {
   };
 
   const downloadAllReports = () => {
+    if (reports.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "کوئی رپورٹ نہیں",
+            description: "ڈاؤن لوڈ کرنے کے لئے کوئی رپورٹس نہیں ہیں۔",
+        });
+        return;
+    }
     const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(
       JSON.stringify(reports, null, 2)
     )}`;
@@ -128,8 +139,7 @@ export default function DashboardPage() {
   }
   
   if (!user) {
-    // This can happen briefly before the redirect to /setup.
-    return <div className="flex justify-center items-center h-screen"> لوڈ ہو رہا ہے...</div>;
+    return null;
   }
   
   if (!isAuthenticated) {
@@ -138,30 +148,67 @@ export default function DashboardPage() {
 
   return (
     <main className="container mx-auto p-4 md:p-8">
-      <header className="flex flex-col items-center text-center mb-8">
+      <header className="flex items-center justify-between mb-8">
         <h1 className="text-4xl font-headline font-bold flex items-center gap-4">
           <Calculator className="w-10 h-10" />
           سمارٹ ڈگری کیلکولیٹر
           <Scale className="w-10 h-10" />
         </h1>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <Settings className="w-8 h-8" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent>
+            <SheetHeader>
+              <SheetTitle>ترتیبات اور اختیارات</SheetTitle>
+            </SheetHeader>
+            <Separator className="my-4" />
+            {user && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <Avatar>
+                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-bold">{user.name}</p>
+                    <p className="text-sm text-muted-foreground">{user.designation}</p>
+                  </div>
+                </div>
+                 <Separator className="my-4" />
+                <div className="grid gap-2">
+                    <Button variant="outline" className="w-full justify-start" onClick={() => singleFileInputRef.current?.click()}>
+                        <Upload className="ml-2 h-5 w-5" /> رپورٹ اپ لوڈ کریں
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start" onClick={() => multipleFileInputRef.current?.click()}>
+                        <Files className="ml-2 h-5 w-5" /> تمام رپورٹس اپ لوڈ کریں
+                    </Button>
+                    <Button variant="outline" className="w-full justify-start" onClick={downloadAllReports}>
+                        <Download className="ml-2 h-5 w-5" /> تمام رپورٹس ڈاؤن لوڈ کریں
+                    </Button>
+                </div>
+                <Separator className="my-4" />
+                <Button variant="destructive" className="w-full" onClick={() => {
+                    logout();
+                    router.push('/setup');
+                }}>
+                  <LogOut className="ml-2 h-5 w-5" /> لاگ آؤٹ
+                </Button>
+              </div>
+            )}
+          </SheetContent>
+        </Sheet>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="mb-8">
         <Link href="/report/new" passHref>
-           <Button className="w-full" size="lg"><Plus className="ml-2 h-5 w-5" /> نئی رپورٹ بنائیں</Button>
+           <Button className="w-full sm:w-auto" size="lg"><Plus className="ml-2 h-5 w-5" /> نئی رپورٹ بنائیں</Button>
         </Link>
-        <Button variant="outline" className="w-full" size="lg" onClick={() => singleFileInputRef.current?.click()}>
-          <Upload className="ml-2 h-5 w-5" /> رپورٹ اپ لوڈ کریں
-        </Button>
-        <Button variant="outline" className="w-full" size="lg" onClick={() => multipleFileInputRef.current?.click()}>
-          <Files className="ml-2 h-5 w-5" /> تمام رپورٹس اپ لوڈ کریں
-        </Button>
-        <Button variant="outline" className="w-full" size="lg" onClick={downloadAllReports}>
-          <Download className="ml-2 h-5 w-5" /> تمام رپورٹس ڈاؤن لوڈ کریں
-        </Button>
-        <input type="file" ref={singleFileInputRef} onChange={handleSingleFileUpload} className="hidden" accept=".json" />
-        <input type="file" ref={multipleFileInputRef} onChange={handleMultipleFilesUpload} className="hidden" accept=".json" multiple />
       </div>
+      
+      <input type="file" ref={singleFileInputRef} onChange={handleSingleFileUpload} className="hidden" accept=".json" />
+      <input type="file" ref={multipleFileInputRef} onChange={handleMultipleFilesUpload} className="hidden" accept=".json" multiple />
 
       <Card>
         <CardHeader>
