@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { type Report } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { reportSchema } from '@/lib/validators';
+import { useAuth } from './use-auth';
 
 const STORAGE_KEY = 'sdc-reports';
 
@@ -24,23 +25,29 @@ const parseReportDates = (report: any): Report => {
 };
 
 export function useReports() {
-  const [reports, setReports] = useState<Report[]>(() => {
-    if (isServer) return [];
+  const [reports, setReports] = useState<Report[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isServer || !isAuthenticated) {
+      setIsLoading(false);
+      return;
+    };
+    
+    let storedReports;
     try {
-      const storedReports = localStorage.getItem(STORAGE_KEY);
+      storedReports = localStorage.getItem(STORAGE_KEY);
       if (storedReports) {
-        return JSON.parse(storedReports).map(parseReportDates);
+        setReports(JSON.parse(storedReports).map(parseReportDates));
       }
     } catch (error) {
       console.error("Failed to load reports from local storage", error);
+      setReports([]);
+    } finally {
+        setIsLoading(false);
     }
-    return [];
-  });
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    setIsLoading(false);
-  }, []);
+  }, [isAuthenticated]);
 
   const saveReportsToStorage = useCallback((updatedReports: Report[]) => {
     if (isServer) return;
